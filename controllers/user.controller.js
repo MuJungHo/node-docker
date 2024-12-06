@@ -68,7 +68,11 @@ exports.findAll = (req, res) => {
 exports.findOne = (req, res) => {
   try {
     const id = req.query.id;
-    User.findByPk(id)
+    User.findByPk(id, {
+      attributes: {
+        exclude: ['password']
+      }
+    })
       .then(data => {
         if (data) {
           res.send(data);

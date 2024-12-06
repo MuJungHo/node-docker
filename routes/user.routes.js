@@ -6,9 +6,9 @@ module.exports = app => {
 
   router.post("/create", verifyToken, user.create);
 
-  router.get("/findAll", verifyToken, user.findAll);
+  router.get("/list", verifyToken, user.findAll);
 
-  router.get("/findOne", verifyToken, user.findOne);
+  router.get("/", verifyToken, user.findOne);
 
   router.put("/update", verifyToken, user.update);
 
