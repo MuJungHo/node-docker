@@ -37,7 +37,8 @@ exports.findAll = (req, res) => {
     const condition = keyword ? { name: { [Op.iLike]: `%${keyword}%` } } : null;
     const column = req.query.sort || null;
     const direction = req.query.order || null;
-    const order = column && direction ? [[column, direction]] : null
+    const order = column && direction ? [[column, direction]] : null;
+    
     User.findAndCountAll({
       where: condition,
       offset,
@@ -142,18 +143,18 @@ exports.delete = (req, res) => {
 };
 
 
-exports.deleteAll = (req, res) => {
-  User.destroy({
-    where: {},
-    truncate: false
-  })
-    .then(nums => {
-      res.send({ message: `${nums} User were deleted successfully!` });
-    })
-    .catch(err => {
-      res.status(500).send({
-        message:
-          err.message || "Some error occurred while removing all user."
-      });
-    });
-};
+// exports.deleteAll = (req, res) => {
+//   User.destroy({
+//     where: {},
+//     truncate: false
+//   })
+//     .then(nums => {
+//       res.send({ message: `${nums} User were deleted successfully!` });
+//     })
+//     .catch(err => {
+//       res.status(500).send({
+//         message:
+//           err.message || "Some error occurred while removing all user."
+//       });
+//     });
+// };

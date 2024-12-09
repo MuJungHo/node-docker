@@ -2,7 +2,7 @@ module.exports = app => {
   const user = require("../controllers/user.controller");
   const verifyToken = require('../middlewares/auth.middleware');
 
-  var router = require("express").Router()
+  var router = require("express").Router();
 
   router.post("/create", verifyToken, user.create);
 
@@ -14,7 +14,7 @@ module.exports = app => {
 
   router.delete("/delete", verifyToken, user.delete);
 
-  router.delete("/deteteAll", verifyToken, user.deleteAll);
+  // router.delete("/deteteAll", verifyToken, user.deleteAll);
 
   app.use("/api/user", router);
 };
