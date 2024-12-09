@@ -31,6 +31,18 @@ const db = {};
 db.Sequelize = Sequelize;
 db.sequelize = sequelize;
 
-db.user = require("./user.model.js")(sequelize, Sequelize);
+const User = require("./user.model.js")(sequelize, Sequelize);
+const Room = require("./room.model.js")(sequelize, Sequelize);
+const Booking = require("./booking.model.js")(sequelize, Sequelize);
+
+db.user = User;
+db.room = Room;
+db.booking = Booking;
+
+// User.hasMany(Booking, { foreignKey: 'userId' });
+// Booking.belongsTo(User, { foreignKey: 'userId' });
+
+// Room.hasMany(Booking, { foreignKey: 'roomId' });
+// Booking.belongsTo(Room, { foreignKey: 'roomId' });
 
 module.exports = db;

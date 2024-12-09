@@ -22,6 +22,8 @@ require("./routes")(app);
 
 require("./models").sequelize.sync();
 
-// db.sequelize.sync({ force: true }).then(() => {
-//   console.log("Drop and re-sync db.");
-// });
+// require("./models").sequelize
+//   .sync({ force: true })
+//   .then(() => {
+//     console.log("Drop and re-sync db.");
+//   });
