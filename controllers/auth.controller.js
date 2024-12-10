@@ -1,5 +1,5 @@
 const db = require("../models");
-const User = db.user;
+const User = db.User;
 // const Op = db.Sequelize.Op;
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -10,6 +10,10 @@ exports.login = async (req, res) => {
     const { account, password } = req.body;
 
     const user = await User.findOne({ where: { account } });
+    
+    if (!user) {
+      return res.status(401).json({ error: 'Authentication failed' });
+    }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
 

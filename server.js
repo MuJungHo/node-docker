@@ -20,7 +20,7 @@ app.use(express.urlencoded({ extended: true }));   /* bodyParser.urlencoded() is
 
 require("./routes")(app);
 
-require("./models").sequelize.sync();
+// require("./models").sequelize.sync();
 
 // require("./models").sequelize
 //   .sync({ force: true })
