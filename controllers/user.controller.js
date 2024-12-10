@@ -1,5 +1,5 @@
 const db = require("../models");
-const User = db.user;
+const User = db.User;
 const Op = db.Sequelize.Op;
 const bcrypt = require('bcrypt');
 
@@ -17,6 +17,12 @@ exports.create = async (req, res) => {
     User.create(user)
       .then(data => {
         res.send(data);
+      })
+      .catch(err => {
+        res.status(500).send({
+          message:
+            err.message || "Some error occurred while creating users."
+        });
       })
   } catch (err) {
     res.status(500).send({
@@ -38,7 +44,7 @@ exports.findAll = (req, res) => {
     const column = req.query.sort || null;
     const direction = req.query.order || null;
     const order = column && direction ? [[column, direction]] : null;
-    
+
     User.findAndCountAll({
       where: condition,
       offset,

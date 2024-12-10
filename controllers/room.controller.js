@@ -1,5 +1,5 @@
 const db = require("../models");
-const Room = db.room;
+const Room = db.Room;
 const Op = db.Sequelize.Op;
 
 exports.create = async (req, res) => {

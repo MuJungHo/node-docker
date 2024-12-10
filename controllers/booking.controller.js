@@ -1,5 +1,5 @@
 const db = require("../models");
-const Booking = db.booking;
+const Booking = db.Booking;
 const Op = db.Sequelize.Op;
 
 exports.create = async (req, res) => {
