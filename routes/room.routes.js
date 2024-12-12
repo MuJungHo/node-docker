@@ -4,7 +4,7 @@ module.exports = app => {
 
   var router = require("express").Router();
 
-  router.post("/create", room.create);
+  router.post("/create", verifyToken, room.create);
 
   router.get("/list", verifyToken, room.findAll);
 

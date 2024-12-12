@@ -1,10 +1,11 @@
 {
   "development": {
-    "username": "",
-    "password": "",
-    "database": "",
-    "host": "",
-    "dialect": ""
+    "username": "deltapq",
+    "password": "zsxc3f1q2w3e4r#$",
+    "database": "SpaceMgt",
+    "host": "192.168.80.42",
+    "port": 5433,
+    "dialect": "postgres"
   },
   "test": {
     "username": "",
