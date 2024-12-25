@@ -18,10 +18,12 @@ module.exports = (sequelize, DataTypes) => {
     userId: DataTypes.INTEGER,
     roomId: DataTypes.INTEGER,
     startTime: DataTypes.DATE,
-    endTime: DataTypes.DATE
+    endDate: DataTypes.DATE,
+    frequency: DataTypes.INTEGER,
+    interval: DataTypes.INTEGER,
   }, {
     sequelize,
-    modelName: 'Booking',
+    modelName: 'Booking'
   });
   return Booking;
 };

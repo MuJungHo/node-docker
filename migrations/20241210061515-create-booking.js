@@ -18,10 +18,16 @@ module.exports = {
       roomId: {
         type: Sequelize.INTEGER
       },
+      frequency: {
+        type: Sequelize.INTEGER
+      },
+      interval: {
+        type: Sequelize.INTEGER
+      },
       startTime: {
         type: Sequelize.DATE
       },
-      endTime: {
+      endDate: {
         type: Sequelize.DATE
       },
       createdAt: {
