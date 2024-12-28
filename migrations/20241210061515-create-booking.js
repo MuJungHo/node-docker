@@ -21,14 +21,17 @@ module.exports = {
       frequency: {
         type: Sequelize.INTEGER
       },
-      interval: {
-        type: Sequelize.INTEGER
-      },
-      startTime: {
-        type: Sequelize.DATE
+      startDate: {
+        type: Sequelize.DATEONLY
       },
       endDate: {
-        type: Sequelize.DATE
+        type: Sequelize.DATEONLY
+      },
+      startTime: {
+        type: Sequelize.INTEGER
+      },
+      endTime: {
+        type: Sequelize.INTEGER
       },
       createdAt: {
         allowNull: false,

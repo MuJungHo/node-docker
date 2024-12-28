@@ -1,44 +1,38 @@
 const db = require("../models");
 const Booking = db.Booking;
+const Room = db.Room;
 const Op = db.Sequelize.Op;
-const moment = require('moment');
-
 
 exports.create = async (req, res) => {
   try {
-
+    // console.log(req)
     const booking = {
       name: req.body.name,
-      userId: req.body.userId,
+      userId: req.id,
       roomId: req.body.roomId,
-      startTime: req.body.startTime,
+      startDate: req.body.startDate,
       endDate: req.body.endDate,
-      interval: req.body.interval,
+      startTime: req.body.startTime,
+      endTime: req.body.endTime,
       frequency: req.body.frequency
     };
 
-    Booking.create(booking)
-      .then(data => {
-        res.send(data);
-      })
-      .catch(err => {
-        res.status(500).send({
-          message: err.message
-        });
-      })
+    const data = await Booking.create(booking)
+
+    res.send(data);
+    
   } catch (err) {
     res.status(500).send({
       message: err.message
     });
   }
-
 };
 
 exports.findAll = (req, res) => {
   try {
 
     const keyword = req.query.keyword;
-    const userId = req.query.userId;
+    const userId = req.id;
     const roomId = req.query.roomId;
     const page = req.query.page || 0;
     const limit = req.query.limit || 10;
@@ -46,23 +40,25 @@ exports.findAll = (req, res) => {
     const column = req.query.sort || null;
     const direction = req.query.order || null;
     const order = column && direction ? [[column, direction]] : null;
-    const startTime = Number(req.query.startTime * 1000) || null;
-    const endTime = Number(req.query.endTime * 1000) || null;
+    const start = Number(req.query.start * 1000) || null;
+    const end = Number(req.query.end * 1000) || null;
+
     const where = {
-      // [Op.or]: [{ endDate: null }, {}],
+      userId,
       [Op.or]: [
         {
-          endDate: { [Op.gt]: new Date(startTime) },
-          startTime: { [Op.lt]: new Date(endTime) }
+          endDate: { [Op.gt]: new Date(start) },
+          startDate: { [Op.lte]: new Date(end) }
         },
         {
           endDate: null,
-          startTime: { [Op.lt]: new Date(endTime) }
+          // frequency: { [Op.not]: 0 },
+          startDate: { [Op.lte]: new Date(end) }
         },
       ],
     };
+
     if (keyword) where["name"] = { [Op.iLike]: `%${keyword}%` };
-    if (userId) where["userId"] = userId;
     if (roomId) where["roomId"] = roomId;
 
     Booking.findAndCountAll({
@@ -85,6 +81,48 @@ exports.findAll = (req, res) => {
     });
   }
 };
+
+exports.findAvailableRoom = async (req, res) => {
+  try {
+
+    const startAt = req.query.startAt;
+
+    const where = {
+      endTime: { [Op.gt]: startAt },
+      startTime: { [Op.lte]: startAt }
+    };
+
+    let bookings = await Booking.findAll({
+      where
+    })
+
+    const excludeBookingId = bookings.map(booking => booking.roomId);
+
+    const page = req.query.page || 0;
+    const limit = req.query.limit || 10;
+    const offset = page * limit;
+    const column = req.query.sort || null;
+    const direction = req.query.order || null;
+    const order = column && direction ? [[column, direction]] : null;
+
+    let rooms = await Room.findAndCountAll({
+      where: {
+        id: { [Op.notIn]: excludeBookingId },
+      },
+      offset,
+      limit,
+      order,
+    })
+
+    res.send(rooms);
+
+  } catch (err) {
+    res.status(500).send({
+      message:
+        err.message
+    });
+  }
+}
 
 
 exports.findOne = (req, res) => {
