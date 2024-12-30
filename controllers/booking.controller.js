@@ -5,7 +5,81 @@ const Op = db.Sequelize.Op;
 
 exports.create = async (req, res) => {
   try {
-    // console.log(req)
+    const reqStartDate = req.body.startDate;
+    const reqStartTime = req.body.startTime;
+    const reqEndTime = req.body.endTime;
+    const endDate = req.body.endDate;
+    const reqFrequency = req.body.frequency;
+    let where = {};
+
+    if (reqFrequency === 0) {
+      where = {
+        [Op.or]: [
+          {
+            frequency: 0,
+            [Op.or]: [
+              {
+                startDate: reqStartDate,
+              },
+              {
+                endDate: { [Op.lt]: reqStartDate }
+              }
+            ],
+            [Op.not]: {
+              [Op.or]: [
+                {
+                  startTime: { [Op.gte]: reqEndTime },
+                },
+                {
+                  endTime: { [Op.lte]: reqStartTime }
+                }
+              ]
+            },
+          }
+        ]
+      }
+    }
+
+    // if (reqFrequency === 1) {
+    //   where = {
+    //     [Op.or]: [
+    //       {
+    //         frequency: 0,
+    //         [Op.not]: {
+    //           [Op.or]: [
+    //             {
+    //               startDate: { [Op.gte]: reqEndTime },
+    //             },
+    //             {
+    //               endDate: { [Op.lte]: reqStartDate }
+    //             }
+    //           ]
+    //         },
+    //         [Op.not]: {
+    //           [Op.or]: [
+    //             {
+    //               startTime: { [Op.gte]: reqEndTime },
+    //             },
+    //             {
+    //               endTime: { [Op.lte]: reqStartTime }
+    //             }
+    //           ]
+    //         },
+    //       }
+    //     ]
+    //   }
+    // }
+
+    let existedBookings = await Booking.findAll({
+      where
+    })
+
+    // console.log(existedBookings)
+
+    if (existedBookings.length > 0) {
+      return res.status(402).send({ error: "Not Avaliable", booking: existedBookings });
+    }
+
     const booking = {
       name: req.body.name,
       userId: req.id,
@@ -20,7 +94,7 @@ exports.create = async (req, res) => {
     const data = await Booking.create(booking)
 
     res.send(data);
-    
+
   } catch (err) {
     res.status(500).send({
       message: err.message
@@ -84,19 +158,46 @@ exports.findAll = (req, res) => {
 
 exports.findAvailableRoom = async (req, res) => {
   try {
+    const date = req.query.date;
+    const startTime = req.query.startTime;
+    const endTime = req.query.endTime;
 
-    const startAt = req.query.startAt;
 
     const where = {
-      endTime: { [Op.gt]: startAt },
-      startTime: { [Op.lte]: startAt }
-    };
+      [Op.or]: [
+        {
+          frequency: 0,
+          startDate: startDate,
+          [Op.not]: {
+            startTime: { [Op.gte]: endTime },
+            endTime: { [Op.lte]: startTime },
+          },
+        },
+        {
+          frequency: { [Op.gte]: 1 },
+          [Op.or]: [
+            {
+              startDate: { [Op.gte]: date },
+              endDate: null
+            },
+            {
+              endDate: { [Op.gt]: date },
+              startDate: { [Op.lte]: date }
+            },
+          ],
+          [Op.not]: {
+            startTime: { [Op.gte]: endTime },
+            endTime: { [Op.lte]: startTime },
+          },
+        }
+      ]
+    }
 
-    let bookings = await Booking.findAll({
+    let existedBookings = await Booking.findAll({
       where
     })
 
-    const excludeBookingId = bookings.map(booking => booking.roomId);
+    const excludeBookingId = existedBookings.map(booking => booking.roomId);
 
     const page = req.query.page || 0;
     const limit = req.query.limit || 10;
