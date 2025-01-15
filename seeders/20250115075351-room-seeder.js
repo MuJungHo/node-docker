@@ -4,18 +4,9 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
 
-    const booking = {
-      "id": 2,
-      "name": "booking",
-      "userId": 1,
-      "roomId": 2,
-      "startTime": 0,
-      "endTime": 1,
-      "startDate": new Date("2024-12-27"),
-      "frequency": 2
-    };
-
-    return queryInterface.bulkInsert("Bookings", [booking]);
+    await queryInterface.bulkInsert('Rooms', [{
+      name: '706'
+    }], {});
   },
 
   async down(queryInterface, Sequelize) {

@@ -2,99 +2,267 @@ const db = require("../models");
 const Booking = db.Booking;
 const Room = db.Room;
 const Op = db.Sequelize.Op;
+const moment = require("moment");
 
 exports.create = async (req, res) => {
   try {
-    const reqStartDate = req.body.startDate;
-    const reqStartTime = req.body.startTime;
-    const reqEndTime = req.body.endTime;
-    const endDate = req.body.endDate;
-    const reqFrequency = req.body.frequency;
-    let where = {};
+    const { roomId, startDate, endDate, startTime, endTime, frequency, name } = req.body;
+    const userId = req.id;
 
-    if (reqFrequency === 0) {
-      where = {
+    let weekdays = [];
+    let monthdates = [];
+    let dates = [];
+    let currentDate = new Date(startDate);
+
+    if (frequency === "once") {
+      dates = [moment(startDate).format("YYYY-MM-DD")];
+      weekdays = [moment(startDate).weekday()];
+      monthdates = [moment(startDate).date()];
+    } else if (frequency === "daily" && endDate) {
+      do {
+        dates.push(moment(currentDate).format("YYYY-MM-DD"));
+        weekdays.push(moment(currentDate).weekday());
+        monthdates.push(moment(currentDate).date());
+        currentDate.setDate(currentDate.getDate() + 1);
+      } while (currentDate <= new Date(`${endDate} 23:59:59`));
+    } else if (frequency === "weekly" && endDate) {
+      do {
+        dates.push(moment(currentDate).format("YYYY-MM-DD"));
+        monthdates.push(moment(currentDate).date());
+        currentDate.setDate(currentDate.getDate() + 7);
+      } while (currentDate <= new Date(`${endDate} 23:59:59`));
+    } else if (frequency === "monthly" && endDate) {
+      do {
+        dates.push(moment(currentDate).format("YYYY-MM-DD"));
+        weekdays.push(moment(currentDate).weekday());
+        monthdates.push(moment(currentDate).date());
+        currentDate.setMonth(currentDate.getMonth() + 1);
+      } while (currentDate <= new Date(`${endDate} 23:59:59`));
+    }
+
+    const conflicts = await Booking.findAll({
+      where: {
+        roomId,
+        startTime: { [Op.between]: [startTime, endTime] },
+        endTime: { [Op.between]: [startTime, endTime] },
         [Op.or]: [
+          (endDate === null && (frequency === "daily" || frequency === 'monthly')) && {
+            frequency: { [Op.in]: ['daily', 'monthly'] },
+            endDate: null,
+          },
           {
-            frequency: 0,
+            frequency: "once",
             [Op.or]: [
-              {
-                startDate: reqStartDate,
+              frequency === "once" && {
+                startDate,
               },
-              {
-                endDate: { [Op.lt]: reqStartDate }
-              }
+              frequency === "daily" && {
+                endDate: { [Op.lte]: startDate },
+                startDate: { [Op.gte]: startDate },
+              },
+              frequency === "weekly" && {
+                weekday: moment(startDate).weekday(),
+                endDate: { [Op.lte]: startDate },
+                startDate: { [Op.gte]: endDate },
+              },
+              frequency === "monthly" && {
+                monthdate: moment(startDate).date(),
+                endDate: { [Op.lte]: startDate },
+                startDate: { [Op.gte]: endDate },
+              },
             ],
-            [Op.not]: {
-              [Op.or]: [
-                {
-                  startTime: { [Op.gte]: reqEndTime },
-                },
-                {
-                  endTime: { [Op.lte]: reqStartTime }
-                }
-              ]
-            },
+          },
+          {
+            frequency: "daily",
+            [Op.or]: [
+              frequency === "once" && {
+                [Op.or]: [
+                  {
+                    startDate: { [Op.lte]: startDate },
+                    endDate: null,
+                  },
+                  {
+                    startDate: { [Op.lte]: startDate },
+                    endDate: { [Op.gte]: startDate },
+                  }
+                ]
+              },
+              frequency === "daily" && {
+                [Op.or]: [
+                  endDate === null && {
+                    startDate: { [Op.gte]: startDate },
+                  },
+                  {
+                    startDate: { [Op.lte]: endDate },
+                    endDate: null
+                  },
+                  {
+                    startDate: { [Op.between]: [startDate, endDate] },
+                  },
+                  {
+                    endDate: { [Op.between]: [startDate, endDate] },
+                  }
+                ]
+              },
+              frequency === "weekly" && {
+                [Op.or]: [
+                  {
+                    weekdays: { [Op.overlap]: [moment(startDate).weekday()] },
+                  },
+                  {
+                    startDate: { [Op.between]: [startDate, endDate] },
+                  },
+                  {
+                    endDate: { [Op.between]: [startDate, endDate] }
+                  }
+                ]
+              },
+              frequency === "monthly" && {
+                [Op.or]: [
+                  {
+                    monthdates: { [Op.overlap]: [moment(startDate).date()] }
+                  },
+                  {
+                    startDate: { [Op.between]: [startDate, endDate] },
+                  },
+                  {
+                    endDate: { [Op.between]: [startDate, endDate] }
+                  }
+                ]
+              },
+            ],
+          },
+          {
+            frequency: "weekly",
+            [Op.or]: [
+              frequency === "once" && {
+                [Op.or]: [
+                  {
+                    startDate,
+                  },
+                  {
+                    startDate: { [Op.lte]: startDate },
+                    endDate: null,
+                    weekday: moment(startDate).weekday()
+                  },
+                  {
+                    startDate: { [Op.lte]: startDate },
+                    endDate: { [Op.gte]: startDate },
+                    weekday: moment(startDate).weekday()
+                  }
+                ]
+              },
+              frequency === "daily" && {
+                [Op.or]: [
+                  {
+                    dates: { [Op.overlap]: dates }
+                  },
+                  {
+                    endDate: null,
+                    weekday: { [Op.in]: weekdays },
+                    startDate: { [Op.lte]: endDate }
+                  }
+                ]
+              },
+              frequency === "weekly" && {
+                weekday: moment(startDate).weekday(),
+                startDate: { [Op.lte]: endDate }
+              },
+              frequency === "monthly" && {
+                monthdates: { [Op.overlap]: monthdates },
+                startDate: { [Op.lte]: endDate }
+              }
+            ]
+          },
+          {
+            frequency: "monthly",
+            [Op.or]: [
+              frequency === "once" && {
+                [Op.or]: [
+                  { startDate },
+                  {
+                    startDate: { [Op.lte]: startDate },
+                    endDate: null,
+                    monthdate: moment(startDate).date()
+                  },
+                  {
+                    startDate: { [Op.lte]: startDate },
+                    endDate: { [Op.gte]: startDate },
+                    monthdate: moment(startDate).date()
+                  }
+                ]
+              },
+              frequency === "daily" && {
+                [Op.or]: [
+                  {
+                    dates: { [Op.overlap]: dates }
+                  },
+                  {
+                    monthdates: { [Op.overlap]: monthdates },
+                  },
+                  {
+                    endDate: null,
+                    startDate: { [Op.lte]: endDate }
+                  },
+                  endDate === null && {
+                    endDate: { [Op.gte]: startDate },
+                  }
+                ]
+              },
+              frequency === "weekly" && {
+                [Op.or]: [
+                  {
+                    dates: { [Op.overlap]: dates }
+                  },
+                  {
+                    monthdates: { [Op.overlap]: monthdates },
+                  },
+                  endDate === null && {
+                    endDate: { [Op.gte]: startDate },
+                    weekdays: { [Op.overlap]: [moment(startDate).weekday()] }
+                  }
+                ]
+              },
+              frequency === "monthly" && {
+                [Op.or]: [
+                  {
+                    startDate: { [Op.lte]: endDate },
+                    monthdate: moment(startDate).date()
+                  },
+                  // endDate === null && {
+                  //   endDate: { [Op.gte]: startDate },
+                  // }
+                ]
+              }
+            ]
           }
         ]
       }
+    });
+    if (conflicts.length > 0) {
+      return res.status(409).json({ conflicts });
     }
 
-    // if (reqFrequency === 1) {
-    //   where = {
-    //     [Op.or]: [
-    //       {
-    //         frequency: 0,
-    //         [Op.not]: {
-    //           [Op.or]: [
-    //             {
-    //               startDate: { [Op.gte]: reqEndTime },
-    //             },
-    //             {
-    //               endDate: { [Op.lte]: reqStartDate }
-    //             }
-    //           ]
-    //         },
-    //         [Op.not]: {
-    //           [Op.or]: [
-    //             {
-    //               startTime: { [Op.gte]: reqEndTime },
-    //             },
-    //             {
-    //               endTime: { [Op.lte]: reqStartTime }
-    //             }
-    //           ]
-    //         },
-    //       }
-    //     ]
-    //   }
-    // }
 
-    let existedBookings = await Booking.findAll({
-      where
-    })
 
-    // console.log(existedBookings)
+    // Create booking
+    const booking = await Booking.create({
+      name,
+      userId,
+      roomId,
+      startDate,
+      endDate,
+      frequency,
+      startTime,
+      endTime,
+      weekdays,
+      monthdates,
+      dates,
+      weekday: moment(startDate).weekday(),
+      monthdate: moment(startDate).date(),
+    });
 
-    if (existedBookings.length > 0) {
-      return res.status(402).send({ error: "Not Avaliable", booking: existedBookings });
-    }
-
-    const booking = {
-      name: req.body.name,
-      userId: req.id,
-      roomId: req.body.roomId,
-      startDate: req.body.startDate,
-      endDate: req.body.endDate,
-      startTime: req.body.startTime,
-      endTime: req.body.endTime,
-      frequency: req.body.frequency
-    };
-
-    const data = await Booking.create(booking)
-
-    res.send(data);
-
+    res.status(201).json({ message: 'Booking created successfully.', booking });
   } catch (err) {
     res.status(500).send({
       message: err.message
@@ -119,17 +287,6 @@ exports.findAll = (req, res) => {
 
     const where = {
       userId,
-      [Op.or]: [
-        {
-          endDate: { [Op.gt]: new Date(start) },
-          startDate: { [Op.lte]: new Date(end) }
-        },
-        {
-          endDate: null,
-          // frequency: { [Op.not]: 0 },
-          startDate: { [Op.lte]: new Date(end) }
-        },
-      ],
     };
 
     if (keyword) where["name"] = { [Op.iLike]: `%${keyword}%` };
@@ -137,9 +294,9 @@ exports.findAll = (req, res) => {
 
     Booking.findAndCountAll({
       where,
-      offset,
-      limit,
-      order,
+      // offset,
+      // limit,
+      order: [["startTime", "asc"], ["startDate", "asc"]]
     })
       .then((data) => {
         res.send(data);
