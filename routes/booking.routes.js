@@ -10,10 +10,7 @@ module.exports = app => {
 
   router.get("/", verifyToken, booking.findOne);
 
-  router.get("/available", verifyToken, booking.findAvailableRoom);
-
   router.put("/update", verifyToken, booking.update);
-
 
   router.delete("/delete", verifyToken, booking.delete);
 
