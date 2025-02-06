@@ -7,8 +7,8 @@ module.exports = app => {
   router.post("/create", verifyToken, room.create);
 
   router.get("/list", verifyToken, room.findAll);
-
   router.get("/", verifyToken, room.findOne);
+  router.get("/avaliable", verifyToken, room.findAvaliable);
 
   router.put("/update", verifyToken, room.update);
 

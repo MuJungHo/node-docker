@@ -39,15 +39,14 @@ const getExpandDates = (startDate, endDate, frequency = "daily") => {
   return { weekdays, monthdates, dates }
 }
 
-const getConflictBookings = async (roomId, endDate, startDate, startTime, endTime, frequency) => {
+const getConflictBookings = async (roomId, endDate, startDate, startTime, frequency) => {
 
   const { weekdays, monthdates, dates } = getExpandDates(startDate, endDate, frequency);
 
   const conflicts = await Booking.findAll({
     where: {
       roomId,
-      startTime: { [Op.between]: [startTime, endTime] },
-      endTime: { [Op.between]: [startTime, endTime] },
+      startTime,
       [Op.or]: [
         (endDate === null && (frequency === "daily" || frequency === 'monthly')) && {
           frequency: { [Op.in]: ['daily', 'monthly'] },
@@ -60,18 +59,15 @@ const getConflictBookings = async (roomId, endDate, startDate, startTime, endTim
               startDate,
             },
             frequency === "daily" && {
-              endDate: { [Op.lte]: startDate },
               startDate: { [Op.gte]: startDate },
             },
             frequency === "weekly" && {
               weekday: moment(startDate).weekday(),
-              endDate: { [Op.lte]: startDate },
-              startDate: { [Op.gte]: endDate },
+              startDate: { [Op.gte]: startDate },
             },
             frequency === "monthly" && {
               monthdate: moment(startDate).date(),
-              endDate: { [Op.lte]: startDate },
-              startDate: { [Op.gte]: endDate },
+              startDate: { [Op.gte]: startDate },
             },
           ],
         },
@@ -249,9 +245,9 @@ exports.create = async (req, res) => {
   try {
     const userId = req.id;
 
-    const { roomId, startDate, endDate, startTime, endTime, frequency, name } = req.body;
+    const { roomId, startDate, endDate, startTime, frequency, name } = req.body;
 
-    const conflicts = await getConflictBookings(roomId, endDate, startDate, startTime, endTime, frequency)
+    const conflicts = await getConflictBookings(roomId, endDate, startDate, startTime, frequency)
 
     if (conflicts.length > 0) {
       return res.status(409).json({ conflicts });
@@ -267,7 +263,6 @@ exports.create = async (req, res) => {
       endDate,
       frequency,
       startTime,
-      endTime,
       weekdays,
       monthdates,
       dates,
@@ -287,30 +282,10 @@ exports.findAll = async (req, res) => {
   try {
 
     const userId = req.id;
-    // const roomId = req.query.roomId;
 
-    const { startDate, endDate, startTime, endTime } = req.query;
-    const _startDate = moment.unix(startDate).format("YYYY-MM-DD");
-    const _endDate = moment.unix(endDate).format("YYYY-MM-DD");
-    // const { weekdays, monthdates, dates } = getExpandDates(_startDate, _endDate);
-    // console.log(_startDate, _endDate)
-    const where = {
-      userId,
-      // roomId,
-      startTime: { [Op.between]: [startTime, endTime] },
-      endTime: { [Op.between]: [startTime, endTime] },
-      [Op.or]: [
-        {
-          startDate: { [Op.lte]: _endDate }
-        },
-        {
-          endDate: { [Op.lte]: _endDate }
-        }
-      ]
-    };
+    const { roomId, startDateUnix, endDateUnix, startTime } = req.query;
 
-
-    const bookings = await Booking.findAndCountAll({ where })
+    const bookings = await findAllBookings([roomId], userId, startDateUnix, endDateUnix, startTime)
 
     res.send(bookings);
 
@@ -320,6 +295,60 @@ exports.findAll = async (req, res) => {
     });
   }
 };
+
+const findAllBookings = async (roomIds = [], userId, startDateUnix, endDateUnix, startTime) => {
+  const endDate = moment.unix(endDateUnix).format("YYYY-MM-DD");
+  const where = {
+    userId,
+    startTime: { [Op.gte]: startTime },
+    [Op.or]: [
+      {
+        startDate: { [Op.lte]: endDate }
+      },
+      {
+        endDate: { [Op.lte]: endDate }
+      }
+    ]
+  };
+  // console.log(roomIds)
+  if (roomIds.length > 0) where["roomId"] = { [Op.in]: roomIds }
+
+  const bookings = await Booking.findAndCountAll({
+    where,
+    order: [["startTime", "ASC"]]
+  });
+
+  return bookings
+};
+
+exports.findAvaliable = async (req, res) => {
+  try {
+    const userId = req.id;
+    const { startDateUnix, endDateUnix, startTime } = req.query;
+
+    const rooms = await Room.findAll();
+    const roomIds = rooms.map(room => room.id);
+
+    const { rows: bookings } = await findAllBookings(roomIds, userId, startDateUnix, endDateUnix, startTime);
+
+    const startDate = moment.unix(startDateUnix).format("YYYY-MM-DD");
+
+    const bookedTimes = bookings
+      .filter(booking => booking.startDate === startDate)
+      // .map(booking => booking.startTime);
+
+    const allTimes = Array.from({ length: 24 }, (_, i) => i);
+
+    const availableTimes = allTimes.filter(time => !bookedTimes.includes(time));
+
+    res.send(availableTimes);
+
+  } catch (err) {
+    res.status(500).send({
+      message: err.message
+    });
+  }
+}
 
 exports.findOne = (req, res) => {
   try {
@@ -341,7 +370,6 @@ exports.findOne = (req, res) => {
     });
   }
 };
-
 
 exports.update = (req, res) => {
   try {
@@ -368,7 +396,6 @@ exports.update = (req, res) => {
   }
 };
 
-
 exports.delete = (req, res) => {
   const id = req.query.id;
 
@@ -392,4 +419,3 @@ exports.delete = (req, res) => {
       });
     });
 };
-

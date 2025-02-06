@@ -20,7 +20,6 @@ module.exports = (sequelize, DataTypes) => {
     startDate: DataTypes.DATEONLY,
     startTime: DataTypes.INTEGER,
     endDate: DataTypes.DATEONLY,
-    endTime: DataTypes.INTEGER,
     frequency: DataTypes.ENUM("once", "daily", "monthly", "weekly"),
     weekday: DataTypes.INTEGER,
     monthdate: DataTypes.INTEGER,

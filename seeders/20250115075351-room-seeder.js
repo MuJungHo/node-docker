@@ -4,9 +4,10 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
 
-    await queryInterface.bulkInsert('Rooms', [{
-      name: '706'
-    }], {});
+    await queryInterface.bulkInsert('Rooms', [
+      { name: '701' },
+      { name: '706' },
+    ], {});
   },
 
   async down(queryInterface, Sequelize) {

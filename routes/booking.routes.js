@@ -7,8 +7,8 @@ module.exports = app => {
   router.post("/create", verifyToken, booking.create);
 
   router.get("/list", verifyToken, booking.findAll);
-
   router.get("/", verifyToken, booking.findOne);
+  router.get("/avaliable", verifyToken, booking.findAvaliable);
 
   router.put("/update", verifyToken, booking.update);
 
