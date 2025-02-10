@@ -5,31 +5,6 @@ const Op = db.Sequelize.Op;
 const moment = require("moment");
 
 
-const findAllBookings = async (roomIds = [], userId, startDateUnix, endDateUnix, startTime) => {
-  const endDate = moment.unix(endDateUnix).format("YYYY-MM-DD");
-  const where = {
-    userId,
-    startTime: { [Op.gte]: startTime },
-    [Op.or]: [
-      {
-        startDate: { [Op.lte]: endDate }
-      },
-      {
-        endDate: { [Op.lte]: endDate }
-      }
-    ]
-  };
-  // console.log(roomIds)
-  if (roomIds.length > 0) where["roomId"] = { [Op.in]: roomIds }
-
-  const bookings = await Booking.findAndCountAll({
-    where,
-    order: [["startTime", "ASC"]]
-  });
-
-  return bookings
-};
-
 exports.create = async (req, res) => {
   try {
 
@@ -51,28 +26,40 @@ exports.create = async (req, res) => {
 
 exports.findAvaliable = async (req, res) => {
   try {
-    const userId = req.id;
+    // const userId = req.id;
     const { startDateUnix, endDateUnix, startTime } = req.query;
 
     const rooms = await Room.findAll();
     const roomIds = rooms.map(room => room.id);
-
-    const { rows: bookings } = await findAllBookings(roomIds, userId, startDateUnix, endDateUnix, startTime);
-
     const startDate = moment.unix(startDateUnix).format("YYYY-MM-DD");
+    const startDateTime = moment.unix(startDateUnix).format("YYYY-MM-DD 00:00:00");
+    const endDateTime = moment.unix(endDateUnix).format("YYYY-MM-DD 23:59:59");
+
+    const where = {
+      // userId,
+      [Op.or]: [
+        {
+          startDateTime: { [Op.between]: [startDateTime, endDateTime] },
+        },
+        {
+          endDateTime: { [Op.between]: [startDateTime, endDateTime] },
+        },
+        {
+          dates: { [Op.overlap]: [startDate] }
+        },
+      ]
+    };
+
+    if (startTime) where["startTime"] = startTime
+    if (roomIds.length > 0) where["roomId"] = { [Op.in]: roomIds }
+
+    const bookings = await Booking.findAll({ where });
 
     const bookedRooms = bookings
-      .filter(booking => booking.startDate == startDate && booking.startTime == startTime)
+      // .filter(booking => booking.startDate == startDate && booking.startTime == startTime)
       .map(booking => booking.roomId);
-    // const bookedTimes = bookings
-    //   .filter(booking => booking.startDate === startDate)
-    // .map(booking => booking.startTime);
 
-    // console.log(bookedRooms)
-
-    // const allTimes = Array.from({ length: 24 }, (_, i) => i);
     const availableRooms = rooms.filter(room => !bookedRooms.includes(room.id));
-    // const availableTimes = allTimes.filter(time => !bookedTimes.includes(time));
 
     res.send(availableRooms);
 

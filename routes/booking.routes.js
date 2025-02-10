@@ -6,7 +6,7 @@ module.exports = app => {
 
   router.post("/create", verifyToken, booking.create);
 
-  router.get("/list", verifyToken, booking.findAll);
+  router.get("/list", verifyToken, booking.findAllBooking);
   router.get("/", verifyToken, booking.findOne);
   router.get("/avaliable", verifyToken, booking.findAvaliable);
 
