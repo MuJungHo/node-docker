@@ -2,14 +2,19 @@ const db = require("../models");
 const Room = db.Room;
 const Booking = db.Booking;
 const Op = db.Sequelize.Op;
+const bcrypt = require('bcrypt');
 const moment = require("moment");
+const jwt = require('jsonwebtoken');
 
 
 exports.create = async (req, res) => {
   try {
+    const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
     const room = {
-      name: req.body.name
+      name: req.body.name,
+      account: req.body.account,
+      password: hashedPassword,
     };
 
     Room.create(room)
@@ -87,6 +92,9 @@ exports.findAll = (req, res) => {
       offset,
       limit,
       order,
+      attributes: {
+        exclude: ['password']
+      }
     })
       .then((data) => {
         res.send(data);
@@ -102,7 +110,6 @@ exports.findAll = (req, res) => {
     });
   }
 };
-
 
 exports.findOne = (req, res) => {
   try {
@@ -124,7 +131,6 @@ exports.findOne = (req, res) => {
     });
   }
 };
-
 
 exports.update = (req, res) => {
   try {
@@ -151,7 +157,6 @@ exports.update = (req, res) => {
   }
 };
 
-
 exports.delete = (req, res) => {
   const id = req.query.id;
 
@@ -176,3 +181,106 @@ exports.delete = (req, res) => {
     });
 };
 
+exports.verify = async (req, res) => {
+  try {
+    const { token } = req.body;
+    const decoded = jwt.verify(token, 'pad-key');
+    res.status(200).json({ decoded });
+  } catch (err) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
+exports.login = async (req, res) => {
+  try {
+    const { account, password } = req.body;
+
+    const room = await Room.findOne({ where: { account } });
+
+    if (!room) {
+      return res.status(401).json({ error: 'Authentication failed' });
+    }
+
+    const passwordMatch = await bcrypt.compare(password, room.password);
+
+    if (!passwordMatch) {
+      return res.status(401).json({ error: 'Authentication failed' });
+    }
+
+    const token = jwt.sign({ id: room.id }, 'pad-key', {
+      expiresIn: '365d',
+    });
+
+    res.status(200).json({ token, room })
+
+    // res.status(200).redirect(`/#/pad-login/${token}`)
+
+  } catch (err) {
+
+    res.status(404).send({ err });
+
+  }
+}
+
+exports.findAllBooking = async (req, res) => {
+  try {
+    // console.log('findAllBooking', req.roomId)
+    const roomId = req.roomId;
+
+    const { startDateUnix, endDateUnix, startTime } = req.query;
+
+    const startDateTime = moment.unix(startDateUnix).format("YYYY-MM-DD 00:00:00");
+    const endDateTime = moment.unix(endDateUnix).format("YYYY-MM-DD 23:59:59");
+    const startDate = moment.unix(startDateUnix).format("YYYY-MM-DD")
+
+    const where = {
+      roomId,
+      [Op.or]: [
+        {
+          startDateTime: { [Op.between]: [startDateTime, endDateTime] },
+        },
+        {
+          endDateTime: { [Op.between]: [startDateTime, endDateTime] },
+        },
+        {
+          dates: { [Op.overlap]: [startDate] }
+        },
+      ]
+    };
+
+    if (startTime) where["startTime"] = { [Op.gte]: startTime }
+
+    const bookings = await Booking.findAndCountAll({
+      where,
+      order: [["startTime", "ASC"]]
+    });
+
+    res.send(bookings);
+
+  } catch (err) {
+    res.status(500).send({
+      message: err.message
+    });
+  }
+};
+
+exports.findMe = async (req, res) => {
+  try {
+    const id = req.roomId;
+    Room.findByPk(id)
+      .then(data => {
+        if (data) {
+          res.send(data);
+        } else {
+          res.status(404).send({
+            message: `Cannot find Room with id=${id}.`
+          });
+        }
+      })
+  } catch (err) {
+    res.status(500).send({
+      message:
+        err.message
+    });
+  }
+}
