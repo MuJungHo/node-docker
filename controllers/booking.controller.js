@@ -1,4 +1,5 @@
 const db = require("../models");
+const websocket = require("../websocket");
 const Booking = db.Booking;
 const Room = db.Room;
 const Op = db.Sequelize.Op;
@@ -76,6 +77,8 @@ exports.create = async (req, res) => {
       }
     });
 
+    websocket.send("add new booking", roomId);
+
     if (conflicts.length > 0) {
       return res.status(409).json({ conflicts });
     }
@@ -95,7 +98,6 @@ exports.create = async (req, res) => {
       monthdates,
       dates
     });
-
     res.status(201).json({ message: 'Booking created successfully.', booking });
 
   } catch (err) {

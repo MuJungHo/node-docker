@@ -26,6 +26,7 @@ module.exports = (sequelize, DataTypes) => {
     dates: DataTypes.ARRAY(DataTypes.DATEONLY),
     monthdates: DataTypes.ARRAY(DataTypes.INTEGER),
     weekdays: DataTypes.ARRAY(DataTypes.INTEGER),
+    checkin: DataTypes.BOOLEAN
   }, {
     sequelize,
     modelName: 'Booking'

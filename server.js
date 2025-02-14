@@ -10,7 +10,7 @@ app.use(cors({
 
 app.use(express.static(path.join(__dirname, 'frontend/build')));
 
-app.listen(port, () => console.log(`port: ${port}`));
+const server = app.listen(port, () => console.log(`port: ${port}`));
 
 // parse requests of content-type - application/json
 app.use(express.json());  /* bodyParser.json() is deprecated */
@@ -19,6 +19,8 @@ app.use(express.json());  /* bodyParser.json() is deprecated */
 app.use(express.urlencoded({ extended: true }));   /* bodyParser.urlencoded() is deprecated */
 
 require("./routes")(app);
+
+require("./websocket").init(server);
 
 // require("./models").sequelize.sync();
 
