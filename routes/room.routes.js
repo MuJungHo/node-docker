@@ -15,10 +15,5 @@ module.exports = app => {
 
   router.delete("/delete", verifyToken, room.delete);
 
-  router.post("/verify", room.verify);
-  router.post("/login", room.login);
-  router.get("/booking-list", verifyPadToken, room.findAllBooking);
-  router.get("/me", verifyPadToken, room.findMe);
-
   app.use("/api/room", router);
 };

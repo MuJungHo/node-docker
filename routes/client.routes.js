@@ -7,6 +7,9 @@ module.exports = app => {
 
   router.post("/booking", verifyClientToken, client.createBooking);
   router.put("/checkin", verifyClientToken, client.checkin);
+  router.post("/login", client.login);
+  router.get("/booking-list", verifyClientToken, client.findAllBooking);
+  router.get("/me", verifyClientToken, client.findMe);
 
   app.use("/api/client", router);
 };
