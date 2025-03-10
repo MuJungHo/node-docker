@@ -24,9 +24,10 @@ module.exports = (sequelize, DataTypes) => {
     endDateTime: DataTypes.DATE,
     frequency: DataTypes.ENUM("once", "daily", "monthly", "weekly"),
     dates: DataTypes.ARRAY(DataTypes.DATEONLY),
-    monthdates: DataTypes.ARRAY(DataTypes.INTEGER),
+    monthDates: DataTypes.ARRAY(DataTypes.INTEGER),
     weekdays: DataTypes.ARRAY(DataTypes.INTEGER),
-    checkin: DataTypes.BOOLEAN
+    removedDates: DataTypes.ARRAY(DataTypes.DATEONLY),
+    checkinDates: DataTypes.ARRAY(DataTypes.DATEONLY),
   }, {
     sequelize,
     modelName: 'Booking'

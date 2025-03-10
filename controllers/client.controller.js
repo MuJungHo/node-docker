@@ -11,38 +11,38 @@ const websocket = require('../websocket');
 
 const getExpandDates = (startDate, endDate, frequency = "daily") => {
   let weekdays = [];
-  let monthdates = [];
+  let monthDates = [];
   let dates = [];
   let currentDate = new Date(startDate);
 
   if (frequency === "once") {
     dates = [moment(startDate).format("YYYY-MM-DD")];
     weekdays = [moment(startDate).weekday()];
-    monthdates = [moment(startDate).date()];
+    monthDates = [moment(startDate).date()];
   } else if (frequency === "daily" && endDate) {
     do {
       dates.push(moment(currentDate).format("YYYY-MM-DD"));
       weekdays.push(moment(currentDate).weekday());
-      monthdates.push(moment(currentDate).date());
+      monthDates.push(moment(currentDate).date());
       currentDate.setDate(currentDate.getDate() + 1);
     } while (currentDate <= new Date(`${endDate} 23:59:59`));
   } else if (frequency === "weekly" && endDate) {
     do {
       dates.push(moment(currentDate).format("YYYY-MM-DD"));
       weekdays.push(moment(currentDate).weekday());
-      monthdates.push(moment(currentDate).date());
+      monthDates.push(moment(currentDate).date());
       currentDate.setDate(currentDate.getDate() + 7);
     } while (currentDate <= new Date(`${endDate} 23:59:59`));
   } else if (frequency === "monthly" && endDate) {
     do {
       dates.push(moment(currentDate).format("YYYY-MM-DD"));
       weekdays.push(moment(currentDate).weekday());
-      monthdates.push(moment(currentDate).date());
+      monthDates.push(moment(currentDate).date());
       currentDate.setMonth(currentDate.getMonth() + 1);
     } while (currentDate <= new Date(`${endDate} 23:59:59`));
   }
 
-  return { weekdays, monthdates, dates }
+  return { weekdays, monthDates, dates }
 }
 
 exports.login = async (req, res) => {
@@ -168,7 +168,7 @@ exports.createBooking = async (req, res) => {
     //   name
     // } = req.body;
 
-    const { weekdays, monthdates, dates } = getExpandDates(startDate, endDate, frequency);
+    const { weekdays, monthDates, dates } = getExpandDates(startDate, endDate, frequency);
 
     const conflicts = await Booking.findAll({
       where: {
@@ -185,7 +185,7 @@ exports.createBooking = async (req, res) => {
             endDate: { [Op.between]: [startDate, endDate] },
             dates: { [Op.overlap]: dates },
             weekdays: { [Op.overlap]: weekdays },
-            monthdates: { [Op.overlap]: monthdates },
+            monthDates: { [Op.overlap]: monthDates },
           }
         ]
       }
@@ -208,15 +208,10 @@ exports.createBooking = async (req, res) => {
       frequency,
       startTime,
       weekdays,
-      monthdates,
+      monthDates,
       dates,
-      checkin: true
+      checkinDates: [moment().format("YYYY-MM-DD")]
     });
-
-    await Room.update({ available: false }, {
-      where: { id: roomId }
-    })
-
 
     websocket.send("add new booking", roomId);
 
@@ -235,7 +230,7 @@ exports.checkin = async (req, res) => {
   try {
     const id = req.roomId;
 
-    const { account, password, bookingId } = req.body;
+    const { account, password, bookingId, date } = req.body;
 
     const user = await User.findOne({ where: { account } });
 
@@ -249,27 +244,25 @@ exports.checkin = async (req, res) => {
       return res.status(401).json({ error: 'Authentication failed' });
     }
 
-    const userId = user.id;
+    const _userId = user.id;
 
-    const booking = await Booking.findByPk(bookingId);
+    let { userId, checkinDates: _checkinDates } = await Booking.findByPk(bookingId);
 
-    if (userId !== booking.userId) {
+    if (_userId !== userId) {
       return res.status(401).json({ error: 'Authentication failed' });
     }
 
-    await Booking.update({ checkin: true }, {
-      where: { id: bookingId }
-    })
+    _checkinDates.push(date);
 
-    await Room.update({ available: false }, {
-      where: { id: id }
+    await Booking.update({ checkinDates: _checkinDates }, {
+      where: { id: bookingId }
     })
 
     res.send({
       message: "checkind was successfully."
     });
 
-    
+
   } catch (err) {
     res.status(500).send({
       message: err.message || "Error updating Room with id=" + id

@@ -5,40 +5,41 @@ const Room = db.Room;
 const Op = db.Sequelize.Op;
 const moment = require("moment");
 
+
 const getExpandDates = (startDate, endDate, frequency = "daily") => {
   let weekdays = [];
-  let monthdates = [];
+  let monthDates = [];
   let dates = [];
   let currentDate = new Date(startDate);
 
   if (frequency === "once") {
     dates = [moment(startDate).format("YYYY-MM-DD")];
     weekdays = [moment(startDate).weekday()];
-    monthdates = [moment(startDate).date()];
+    monthDates = [moment(startDate).date()];
   } else if (frequency === "daily" && endDate) {
     do {
       dates.push(moment(currentDate).format("YYYY-MM-DD"));
       weekdays.push(moment(currentDate).weekday());
-      monthdates.push(moment(currentDate).date());
+      monthDates.push(moment(currentDate).date());
       currentDate.setDate(currentDate.getDate() + 1);
-    } while (currentDate <= new Date(`${endDate} 23:59:59`));
+    } while (currentDate < new Date(endDate));
   } else if (frequency === "weekly" && endDate) {
     do {
       dates.push(moment(currentDate).format("YYYY-MM-DD"));
       weekdays.push(moment(currentDate).weekday());
-      monthdates.push(moment(currentDate).date());
+      monthDates.push(moment(currentDate).date());
       currentDate.setDate(currentDate.getDate() + 7);
-    } while (currentDate <= new Date(`${endDate} 23:59:59`));
+    } while (currentDate < new Date(endDate));
   } else if (frequency === "monthly" && endDate) {
     do {
       dates.push(moment(currentDate).format("YYYY-MM-DD"));
       weekdays.push(moment(currentDate).weekday());
-      monthdates.push(moment(currentDate).date());
+      monthDates.push(moment(currentDate).date());
       currentDate.setMonth(currentDate.getMonth() + 1);
-    } while (currentDate <= new Date(`${endDate} 23:59:59`));
+    } while (currentDate < new Date(endDate));
   }
 
-  return { weekdays, monthdates, dates }
+  return { weekdays, monthDates, dates }
 }
 
 exports.create = async (req, res) => {
@@ -54,7 +55,7 @@ exports.create = async (req, res) => {
       name
     } = req.body;
 
-    const { weekdays, monthdates, dates } = getExpandDates(startDate, endDate, frequency);
+    const { weekdays, monthDates, dates } = getExpandDates(startDate, endDate, frequency);
 
     const conflicts = await Booking.findAll({
       where: {
@@ -71,7 +72,7 @@ exports.create = async (req, res) => {
             endDate: { [Op.between]: [startDate, endDate] },
             dates: { [Op.overlap]: dates },
             weekdays: { [Op.overlap]: weekdays },
-            monthdates: { [Op.overlap]: monthdates },
+            monthDates: { [Op.overlap]: monthDates },
           }
         ]
       }
@@ -90,13 +91,14 @@ exports.create = async (req, res) => {
       startDate,
       endDate,
       startDateTime: new Date(`${startDate} 00:00:00`),
-      endDateTime: new Date(`${endDate} 23:59:59`),
+      endDateTime: new Date(`${endDate} 00:00:00`),
       endDate,
       frequency,
       startTime,
       weekdays,
-      monthdates,
-      dates
+      monthDates,
+      dates,
+      checkinDates: []
     });
     res.status(201).json({ message: 'Booking created successfully.', booking });
 
@@ -117,7 +119,7 @@ exports.findAllBooking = async (req, res) => {
     const { roomId, startDateUnix, endDateUnix, startTime } = req.query;
 
     const startDateTime = moment.unix(startDateUnix).format("YYYY-MM-DD 00:00:00");
-    const endDateTime = moment.unix(endDateUnix).format("YYYY-MM-DD 23:59:59");
+    const endDateTime = moment.unix(endDateUnix).format("YYYY-MM-DD 00:00:00");
     const startDate = moment.unix(startDateUnix).format("YYYY-MM-DD")
 
     const where = {
@@ -161,7 +163,7 @@ exports.findAvaliable = async (req, res) => {
     const roomIds = rooms.map(room => room.id);
     const startDate = moment.unix(startDateUnix).format("YYYY-MM-DD");
     const startDateTime = moment.unix(startDateUnix).format("YYYY-MM-DD 00:00:00");
-    const endDateTime = moment.unix(endDateUnix).format("YYYY-MM-DD 23:59:59");
+    const endDateTime = moment.unix(endDateUnix).format("YYYY-MM-DD 00:00:00");
 
     const where = {
       // userId,
