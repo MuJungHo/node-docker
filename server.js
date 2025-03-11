@@ -22,6 +22,8 @@ require("./routes")(app);
 
 require("./websocket").init(server);
 
+require("./ldap").init();
+
 // require("./models").sequelize.sync();
 
 // require("./models").sequelize
